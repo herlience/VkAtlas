@@ -1,0 +1,17 @@
+# build out
+build/
+bin/
+out/
+.vs/
+
+# build files
+*.obj
+*.exe
+*.o
+*.a
+*.lib
+
+# IDE options
+.idea/
+*.user
+*.vcxproj.user
