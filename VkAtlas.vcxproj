@@ -103,8 +103,8 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)three-party\glfw\include;$(SolutionDir)three-party\imgui;$(SolutionDir)three-party\imguinode;$(SolutionDir)three-party\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(SolutionDir)three-party\glfw\include;$(SolutionDir)three-party\imgui;$(SolutionDir)three-party\imguinode;$(SolutionDir)three-party\llvm\include;$(SolutionDir)three-party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -127,8 +127,8 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)three-party\glfw\include;$(SolutionDir)three-party\imgui;$(SolutionDir)three-party\imguinode;$(SolutionDir)three-party\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(SolutionDir)three-party\glfw\include;$(SolutionDir)three-party\imgui;$(SolutionDir)three-party\imguinode;$(SolutionDir)three-party\llvm\include;$(SolutionDir)three-party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,14 +147,36 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\vkainfo.h" />
     <ClInclude Include="src\ui\nodeEditor.h" />
     <ClInclude Include="src\core\VkAtlasData.h" />
     <ClInclude Include="src\ui\window.h" />
+    <ClInclude Include="three-party\imgui\imconfig.h" />
+    <ClInclude Include="three-party\imgui\imgui.h" />
+    <ClInclude Include="three-party\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="three-party\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="three-party\imgui\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="three-party\imgui\imgui_internal.h" />
+    <ClInclude Include="three-party\imgui\imstb_rectpack.h" />
+    <ClInclude Include="three-party\imgui\imstb_textedit.h" />
+    <ClInclude Include="three-party\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\parser\XMLParsing.h" />
+    <ClInclude Include="three-party\pugixml\pugiconfig.hpp" />
+    <ClInclude Include="three-party\pugixml\pugixml.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ui\nodeEditor.cpp" />
     <ClCompile Include="src\ui\window.cpp" />
     <ClCompile Include="src\VkAtlasMain.cpp" />
+    <ClCompile Include="three-party\imgui\imgui.cpp" />
+    <ClCompile Include="three-party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="three-party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="three-party\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="three-party\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="three-party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="three-party\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\parser\XMLParsing.cpp" />
+    <ClCompile Include="three-party\pugixml\pugixml.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
