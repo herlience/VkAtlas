@@ -3,6 +3,13 @@ build/
 bin/
 out/
 .vs/
+x64/
+x86/
+Debug/
+Release/
+VkAtlas/x64/
+VkAtlas/Debug/
+VkAtlas/Release/
 
 # build files
 *.obj
