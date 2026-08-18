@@ -1,9 +1,9 @@
 #pragma once 
 
 #include <string>
-#include "../core/VkAtlasData.h"
+#include "../common/VkAtlasData.h"
 
-namespace VKA::PARSER {
+namespace VKA::PARSER::XML {
 	class XMLParsing {
 	public: 
 		XMLParsing() = default;

@@ -1,20 +1,24 @@
 #include "ui/window.h"
 #include <imgui.h>
-#include "core/VkAtlasData.h"
+#include "common/VkAtlasData.h"
 #include "parser/XMLParsing.h"
+#include "core/interface.hpp"
 #include <iostream>
 
 int main() {
-	VKA::UI::Window window;
+	VKA::UI::WINDOW::Window window;
+	VKA::DATA::GraphContext context;
+	VKA::PARSER::XML::XMLParsing xmlparser;
+
+	xmlparser.initAndParse(context);
 
 	while (!window.shoudlclose()) {
 		window.beginframe();
 		
-		ImGui::ShowDemoWindow();
+		VKA::CORE::INTERFACE::renderUI(context);
 
 		window.endframe();
 	}
 
-	window.~Window();
 	return 0;
 }

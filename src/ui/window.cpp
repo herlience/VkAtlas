@@ -1,6 +1,7 @@
 #include <iostream>
 
-#define VKA_GLFW_ERROR(reason) std::cout << "[GLFW_ERROR] (" << __FILE__ << ":" << __LINE__ << ") " << reason << std::endl;
+#include "../common/vkainfo.h"
+#include "../core/interface.hpp"
 
 #include "window.h"
 
@@ -8,7 +9,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-namespace VKA::UI {
+namespace VKA::UI::WINDOW {
 
 	Window::Window(int width, int height, std::string title)
 		: m_width(width), m_height(height), m_title(title) {
@@ -27,6 +28,8 @@ namespace VKA::UI {
 			glfwTerminate();
 			return;
 		}
+
+		glfwSetDropCallback(windowhandle, VKA::CORE::INTERFACE::drop_callback);
 
 		glfwMakeContextCurrent(windowhandle);
 		glfwSwapInterval(1);
@@ -82,4 +85,4 @@ namespace VKA::UI {
 
 		glfwSwapBuffers(windowhandle);
 	}
-} // VKA::UI
+} // VKA::UI::WINDOW

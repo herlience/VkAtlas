@@ -147,9 +147,11 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\interface.hpp" />
     <ClInclude Include="src\common\vkainfo.h" />
+    <ClInclude Include="src\parser\VKACustomParser\VKAParserTypes.hpp" />
     <ClInclude Include="src\ui\nodeEditor.h" />
-    <ClInclude Include="src\core\VkAtlasData.h" />
+    <ClInclude Include="src\common\VkAtlasData.h" />
     <ClInclude Include="src\ui\window.h" />
     <ClInclude Include="three-party\imgui\imconfig.h" />
     <ClInclude Include="three-party\imgui\imgui.h" />
@@ -163,8 +165,12 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="src\parser\XMLParsing.h" />
     <ClInclude Include="three-party\pugixml\pugiconfig.hpp" />
     <ClInclude Include="three-party\pugixml\pugixml.hpp" />
+    <ClInclude Include="src\parser\VKACustomParser\VKALexer.hpp" />
+    <ClInclude Include="src\parser\VKACustomParser\VKAPreprocessor.hpp" />
+    <ClInclude Include="src\parser\VKACustomParser\VKAParser.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\interface.cpp" />
     <ClCompile Include="src\ui\nodeEditor.cpp" />
     <ClCompile Include="src\ui\window.cpp" />
     <ClCompile Include="src\VkAtlasMain.cpp" />
@@ -177,6 +183,9 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClCompile Include="three-party\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\parser\XMLParsing.cpp" />
     <ClCompile Include="three-party\pugixml\pugixml.cpp" />
+    <ClCompile Include="src\parser\VKACustomParser\VKALexer.cpp" />
+    <ClCompile Include="src\parser\VKACustomParser\VKAPreprocessor.cpp" />
+    <ClCompile Include="src\parser\VKACustomParser\VKAParser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

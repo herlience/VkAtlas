@@ -3,7 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <string>
 
-namespace VKA::UI {
+namespace VKA::UI::WINDOW {
 
 	class Window {
 	public:
@@ -24,4 +24,4 @@ namespace VKA::UI {
 
 		GLFWwindow* windowhandle = nullptr;
 	};
-}
+} // VKA::UI::WINDOW

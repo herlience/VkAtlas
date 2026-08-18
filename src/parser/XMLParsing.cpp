@@ -9,7 +9,7 @@
 
 namespace fs = std::filesystem;
 
-namespace VKA::PARSER {
+namespace VKA::PARSER::XML {
 	std::string XMLParsing::findXMLPath() {
 		const char* sdkPathEnv = std::getenv("VULKAN_SDK");
 		if (!sdkPathEnv) {
@@ -67,6 +67,10 @@ namespace VKA::PARSER {
 		}
 
 		pugi::xml_node commandsnode = registry.child("commands");
+		pugi::xml_node enumsnode = registry.child("enum");
+
+		// This loop iterates over all nodes tagged with <command> within vk.xml
+
 		for (pugi::xml_node cmdNode = commandsnode.child("command"); cmdNode; cmdNode = cmdNode.next_sibling("command")) {
 			pugi::xml_node protoNode = cmdNode.child("proto");
 			if (!protoNode) { continue; }
@@ -87,7 +91,8 @@ namespace VKA::PARSER {
 				spec.queues.push_back(queueAttribute.substr(start));
 			}
 
-			for (pugi::xml_node paramNode = cmdNode.child("param"); paramNode; paramNode = paramNode.next_sibling()) {
+			// and this loop finds all parameters for commandspec
+			for (pugi::xml_node paramNode = cmdNode.child("param"); paramNode; paramNode = paramNode.next_sibling("param")) {
 				VKA::DATA::VulkanParamSpec param;
 				param.type = paramNode.child_value("type");
 				param.name = paramNode.child_value("name");
@@ -106,7 +111,17 @@ namespace VKA::PARSER {
 			}
 			graphcontext.commandspecs[spec.name] = spec;
 		}
+
+		// This loop iterates over all nodes tagged with <enum> within vk.xml
+		for (pugi::xml_node enumnode = enumsnode.child("enum"); enumnode; enumnode = enumnode.next_sibling("enum")) {
+			pugi::xml_attribute nameAttr = enumnode.attribute("name");
+			if (!nameAttr) { continue; }
+
+			std::string enumname = nameAttr.as_string();
+			graphcontext.enumspecs.insert(enumname);
+		}
+
 		VKA_DEBUG_MSG("Vulkan Specification is loaded to memory");
 		return true;
 	}
-}
+} // VKA::PARSER::XML
