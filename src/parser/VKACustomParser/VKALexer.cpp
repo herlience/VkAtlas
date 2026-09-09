@@ -22,7 +22,8 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
-			if (c == '{' || c == '[' || c == ']' || c == '}' || c == '.' || c == '=') {
+			if (c == '{' || c == '[' || c == ']' || c == '}' || c == '.' || c == '=' ||
+				c == '(' || c == ')' || c == ';' || c == ',' || c == '*' || c == '&') {
 				addToken(VKA::DATA::Tokentype::Operator, std::string(1, c), filepath);
 				advance();
 				continue;
@@ -66,6 +67,30 @@ namespace VKA::PARSER::LEXER {
 				}
 				else {
 					addToken(VKA::DATA::Tokentype::Operator, ">", filepath);
+					continue;
+				}
+			}
+
+			if (c == '&') {
+				advance();
+				if (match('&')) {
+					addToken(VKA::DATA::Tokentype::Operator, "&&", filepath);
+					continue;
+				}
+				else {
+					addToken(VKA::DATA::Tokentype::Operator, "&", filepath);
+					continue;
+				}
+			}
+
+			if (c == '|') {
+				advance();
+				if (match('|')) {
+					addToken(VKA::DATA::Tokentype::Operator, "||", filepath);
+					continue;
+				}
+				else {
+					addToken(VKA::DATA::Tokentype::Operator, "|", filepath);
 					continue;
 				}
 			}
