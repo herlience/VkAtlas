@@ -14,6 +14,10 @@
 
 namespace VKA::DATA {
 
+	// Forward Declarations
+	struct VkaNodeData;
+	struct ASTNode;
+
 	// -- PARSER DATA
 
 	enum class Tokentype : uint32_t {
@@ -61,15 +65,13 @@ namespace VKA::DATA {
 		uint32_t endnodeid = 0;
 	};
 
-	struct VkaNodeData;
-
 	struct DataFromParser {
 		std::vector<VkaNodeData> nodes;
 		std::vector<LinkArrow> connections;
 
 		std::unordered_map<std::string, Symbol> symbolmap;
 		std::unordered_map<std::string, MacroDefinition> macromap;
-		
+
 		uint32_t totalfilesparsed = 0;
 		uint32_t totallinesparsed = 0;
 		std::vector<std::string> parserlogs;
@@ -84,7 +86,6 @@ namespace VKA::DATA {
 			totallinesparsed = 0;
 		}
 	};
-	/////-----
 
 	// Stores call data extracted by the parser
 	struct RawVulkanCall {
@@ -93,14 +94,14 @@ namespace VKA::DATA {
 		int line = 0;
 	};
 
-	 // -- NODE DATA
+	// -- NODE DATA
 
 	enum class NodeStatus : uint8_t {
 		Success,
 		Warning, // like unresolved symbol 
 		Error,
 	};
-	/*
+
 	struct VkaNodeData {
 		uint32_t id = 0;
 		std::string commandname;
@@ -115,11 +116,51 @@ namespace VKA::DATA {
 		NodeStatus status = NodeStatus::Success;
 		std::string statusMsg; // warning or error explanation
 	};
-	*/
-	/////-----
 
+	// -- AST DATA STRUCTS
 
-	// -- AST NODE DATA
+	enum class ASTNodeType : uint32_t {
+		Block,
+		VariableDecl,
+		FunctionCall,
+		Expression
+	};
+
+	struct BlockNodeData {
+		std::vector<uint32_t> statements_indices;
+	};
+
+	struct VariableDeclNodeData {
+		std::string type;
+		std::string name;
+		uint32_t init_expression = UINT32_MAX;
+	};
+
+	struct FunctionCallNodeData {
+		std::string function_name;
+		std::vector<uint32_t> arguments_indices;
+	};
+
+	struct ExpressionNodeData {
+		std::string text;
+		bool is_address_of = false;
+	};
+
+	// -- AST NODE & TREE
+
+	struct ASTNode {
+		uint32_t id = 0;
+		uint32_t line = 0;
+
+		ASTNodeType type = ASTNodeType::Expression;
+
+		std::variant<BlockNodeData, VariableDeclNodeData, FunctionCallNodeData, ExpressionNodeData> data;
+		std::vector<std::string> inputRes;
+		std::vector<std::string> outputRes;
+
+		NodeStatus status = NodeStatus::Success;
+		std::string statusMsg;
+	};
 
 	struct ASTTree {
 		std::vector<ASTNode> astnodes;
@@ -131,58 +172,12 @@ namespace VKA::DATA {
 		}
 	};
 
-	enum class ASTNodeType : uint32_t {
-		Block,
-		VariableDecl,
-		FunctionCall,
-		Expression
-	};
-
-	struct ASTNode {
-		uint32_t id = 0;
-		uint32_t line = 0;
-
-		ASTNodeType type;
-
-		std::variant<BlockNodeData, VariableDeclNodeData, FunctionCallNodeData, ExpressionNodeData> data;
-		std::vector<std::string> inputRes;
-		std::vector<std::string> outputRes;
-
-		NodeStatus status = NodeStatus::Success;
-		std::string statusMsg;
-
-	};
-
-	struct BlockNodeData {
-		std::vector<uint32_t> statements_indices;
-	};
-
-	struct VariableDeclNodeData {
-		std::string type; 
-		std::string name; 
-		uint32_t init_expression; 
-	};
-
-	struct FunctionCallNodeData {
-		std::string function_name;
-		std::vector<uint32_t> arguments_indices;
-	};
-
-	struct ExpressionNodeData {
-		std::string text; 
-		bool is_address_of = false; 
-	};
-
-	////------
-
 	// -- XML PARSER DATA
 
 	struct VulkanParamSpec {
-		// type and name aren't same things. type is like "VkBuffer", 
-		// "VkImage" and name is like "srcbuffer" and "dstbuffer" be careful!
 		std::string type;
 		std::string name;
-		
+
 		bool isPtr = false;
 		bool isConst = false;
 		bool isStruct = false;
@@ -197,7 +192,6 @@ namespace VKA::DATA {
 		std::vector<std::string> queues;
 		std::string renderpassscope;
 	};
-	/////-----
 
 	// -- GRAPH CONTEXT 
 
@@ -207,7 +201,7 @@ namespace VKA::DATA {
 		std::vector<LinkArrow> links;
 
 		std::unordered_map<std::string, std::vector<RawVulkanCall>> symbolmap;
-		
+
 		std::unordered_map<std::string, VulkanCommandSpec> commandspecs;
 		std::unordered_set<std::string> enumspecs;
 		std::unordered_set<std::string> typespecs;

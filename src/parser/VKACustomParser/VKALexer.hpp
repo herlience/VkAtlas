@@ -9,7 +9,7 @@ namespace VKA::PARSER::LEXER {
 	{
 	public:
 
-		std::vector<VKA::DATA::Token> tokenize(const std::string& sourcecode, std::string& filepath, VKA::DATA::GraphContext context);
+		std::vector<VKA::DATA::Token> tokenize(const std::string& sourcecode, const std::string& filepath, const VKA::DATA::GraphContext& context);
 
 	private:
 		std::vector<VKA::DATA::Token> tokens;
@@ -29,13 +29,13 @@ namespace VKA::PARSER::LEXER {
 		void addToken(VKA::DATA::Tokentype type, const std::string& text, const std::string& filepath);
 
 		void parseVk(
-			VKA::DATA::GraphContext& context,
-			std::string& filepath
+			const VKA::DATA::GraphContext& context,
+			const std::string& filepath
 		);
 
-		void parseString(std::string& filepath);
+		void parseString(const std::string& filepath);
 
-		void parseDigit(std::string& filepath);
+		void parseDigit(const std::string& filepath);
 	};
 
 }

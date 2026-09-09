@@ -3,15 +3,18 @@
 #include <algorithm>
 
 namespace VKA::PARSER::LEXER {
-	std::vector<VKA::DATA::Token> VKALexer::tokenize(const std::string& sourcecode, std::string& filepath, VKA::DATA::GraphContext context) {
+	std::vector<VKA::DATA::Token> VKALexer::tokenize(const std::string& sourcecode, const std::string& filepath, const VKA::DATA::GraphContext& context) {
 		m_source = sourcecode;
-		
+		m_cursor = 0;
+		line = 1;
+		column = 1;
+		tokens.clear();
 
 		while (m_cursor < m_source.length()) {
 			char c = m_source[m_cursor];
-			bool resultspace = isCharSpace(c);
-			if (resultspace) {
-				 advance();
+
+			if (isCharSpace(c)) {
+				advance();
 				continue;
 			}
 
@@ -23,7 +26,7 @@ namespace VKA::PARSER::LEXER {
 			}
 
 			if (c == '{' || c == '[' || c == ']' || c == '}' || c == '.' || c == '=' ||
-				c == '(' || c == ')' || c == ';' || c == ',' || c == '*' || c == '&') {
+				c == '(' || c == ')' || c == ';' || c == ',' || c == '*') {
 				addToken(VKA::DATA::Tokentype::Operator, std::string(1, c), filepath);
 				advance();
 				continue;
@@ -43,56 +46,50 @@ namespace VKA::PARSER::LEXER {
 				advance();
 				if (match('<')) {
 					addToken(VKA::DATA::Tokentype::Operator, "<<", filepath);
-					continue;
 				}
 				else if (match('=')) {
 					addToken(VKA::DATA::Tokentype::Operator, "<=", filepath);
-					continue;
 				}
 				else {
 					addToken(VKA::DATA::Tokentype::Operator, "<", filepath);
-					continue;
 				}
+				continue;
 			}
 
 			if (c == '>') {
 				advance();
 				if (match('>')) {
 					addToken(VKA::DATA::Tokentype::Operator, ">>", filepath);
-					continue;
 				}
 				else if (match('=')) {
 					addToken(VKA::DATA::Tokentype::Operator, ">=", filepath);
-					continue;
 				}
 				else {
 					addToken(VKA::DATA::Tokentype::Operator, ">", filepath);
-					continue;
 				}
+				continue;
 			}
 
 			if (c == '&') {
 				advance();
 				if (match('&')) {
 					addToken(VKA::DATA::Tokentype::Operator, "&&", filepath);
-					continue;
 				}
 				else {
 					addToken(VKA::DATA::Tokentype::Operator, "&", filepath);
-					continue;
 				}
+				continue;
 			}
 
 			if (c == '|') {
 				advance();
 				if (match('|')) {
 					addToken(VKA::DATA::Tokentype::Operator, "||", filepath);
-					continue;
 				}
 				else {
 					addToken(VKA::DATA::Tokentype::Operator, "|", filepath);
-					continue;
 				}
+				continue;
 			}
 
 			if (c == '#') {
@@ -106,7 +103,7 @@ namespace VKA::PARSER::LEXER {
 					directive.push_back(advance());
 				}
 
-				addToken(VKA::DATA::Tokentype::Identifier, directive, filepath);
+				addToken(VKA::DATA::Tokentype::Macro, directive, filepath);
 				continue;
 			}
 
@@ -128,30 +125,26 @@ namespace VKA::PARSER::LEXER {
 	}
 
 	bool VKALexer::isDigit(char c) {
-		return (c == '0' || c == '1' || c == '2' || c == '3' || c == '4' || c == '5' || c == '6' || c == '7' || c == '8' || c == '9');
+		return (c >= '0' && c <= '9');
 	}
 
-	// cursoru diðer karaktere atlatýr
-	char VKALexer::advance() { 
+	char VKALexer::advance() {
 		char c = m_source[m_cursor];
 		m_cursor++;
 		column++;
 		return c;
 	}
 
-	// diðer karakteri öngörür
 	char VKALexer::peek() const {
 		if (m_cursor >= m_source.length()) return '\0';
 		return m_source[m_cursor];
 	}
 
-	// diðer karakteri öngörür
 	char VKALexer::peeknext() const {
 		if (m_cursor + 1 >= m_source.length()) return '\0';
 		return m_source[m_cursor + 1];
 	}
 
-	// diðer karakteri tahmin eder
 	bool VKALexer::match(char expected) {
 		if (m_cursor >= m_source.length()) return false;
 		if (m_source[m_cursor] != expected) return false;
@@ -173,9 +166,9 @@ namespace VKA::PARSER::LEXER {
 	}
 
 	void VKALexer::parseVk(
-		VKA::DATA::GraphContext& context,
-		std::string& filepath
-		) {
+		const VKA::DATA::GraphContext& context,
+		const std::string& filepath
+	) {
 		std::string kelime;
 
 		while (m_cursor < m_source.length()) {
@@ -183,11 +176,15 @@ namespace VKA::PARSER::LEXER {
 			if (c == ' ' || c == '\n' || c == '\t' || c == '\r' ||
 				c == '{' || c == '}' || c == '[' || c == ']' ||
 				c == ';' || c == '(' || c == ')' || c == '<' || c == '>' ||
-				c == '.' || c == '=') {
+				c == '.' || c == '=' || c == ',' || c == '*' || c == '&') {
 				break;
 			}
 			kelime.push_back(c);
 			advance();
+		}
+
+		if (kelime.empty()) {
+			return;
 		}
 
 		if (context.commandspecs.find(kelime) != context.commandspecs.end()) {
@@ -196,15 +193,18 @@ namespace VKA::PARSER::LEXER {
 		else if (context.enumspecs.find(kelime) != context.enumspecs.end()) {
 			addToken(VKA::DATA::Tokentype::Vkenum, kelime, filepath);
 		}
+		else if (context.typespecs.find(kelime) != context.typespecs.end()) {
+			addToken(VKA::DATA::Tokentype::Vktype, kelime, filepath);
+		}
 		else {
 			addToken(VKA::DATA::Tokentype::Identifier, kelime, filepath);
 		}
 	}
 
-	void VKALexer::parseString(std::string& filepath) {
+	void VKALexer::parseString(const std::string& filepath) {
 		advance();
 		std::string strcontext;
-		
+
 		while (m_cursor < m_source.length()) {
 			char c = peek();
 
@@ -229,7 +229,7 @@ namespace VKA::PARSER::LEXER {
 		addToken(VKA::DATA::Tokentype::StringLiteral, strcontext, filepath);
 	}
 
-	void VKALexer::parseDigit(std::string& filepath) {
+	void VKALexer::parseDigit(const std::string& filepath) {
 		std::string digit;
 
 		bool isfloat = false;

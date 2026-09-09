@@ -19,8 +19,8 @@ namespace VKA::PARSER::CUSTOM {
 
         // --- AYRIÞTIRICILAR ---
         void parseFunction(VKA::DATA::ASTTree& tree);
-        void parseVariable();
-        void parseExpression();
+        void parseVariable(VKA::DATA::ASTTree& tree);
+        void parseExpression(VKA::DATA::ASTTree& tree);
     public:
         // Kurucu (Constructor)
         VKAParser(std::vector<VKA::DATA::Token> tokenList, VKA::DATA::DataFromParser& globalData);

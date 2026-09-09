@@ -14,7 +14,7 @@ namespace VKA::UI::WINDOW {
 	Window::Window(int width, int height, std::string title)
 		: m_width(width), m_height(height), m_title(title) {
 		if (!glfwInit()) {
-			VKA_GLFW_ERROR("Failed to initialize GLFW!");
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_GLFW_ERROR), "Failed to initialize GLFW!");
 			return;
 		}
 
@@ -24,7 +24,7 @@ namespace VKA::UI::WINDOW {
 
 		windowhandle = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
 		if (!windowhandle) {
-			VKA_GLFW_ERROR("Failed to create window!");
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_GLFW_ERROR), "Failed to create window!");
 			glfwTerminate();
 			return;
 		}
