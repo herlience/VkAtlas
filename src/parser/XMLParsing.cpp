@@ -13,7 +13,7 @@ namespace VKA::PARSER::XML {
 	std::string XMLParsing::findXMLPath() {
 		const char* sdkPathEnv = std::getenv("VULKAN_SDK");
 		if (!sdkPathEnv) {
-			VKA_XML_PARSER_ERROR("Failed to find VULKAN_SDK! Is VULKAN_SDK installed ? ");
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), "Failed to find VULKAN_SDK! Is VULKAN_SDK installed ? ");
 			return "";
 		}
 
@@ -40,34 +40,35 @@ namespace VKA::PARSER::XML {
 			}
 		}
 		catch (const std::exception& e) {
-			VKA_XML_PARSER_ERROR(e.what());
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), e.what());
 		}
 
-		VKA_XML_PARSER_ERROR("VULKAN_SDK found but vk.xml was not detected within it");
+		VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), "VULKAN_SDK found but vk.xml was not detected within it");
 		return "";
 	}
 
 	bool XMLParsing::initAndParse(VKA::DATA::GraphContext& graphcontext) {
 		std::string xmlpath = findXMLPath();
 		if (xmlpath.empty()) { 
-			VKA_XML_PARSER_ERROR("XML FILE IS EMPTY");
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), "XML FILE IS EMPTY");
 			return false; }
 
 		pugi::xml_document doc;
 		pugi::xml_parse_result result = doc.load_file(xmlpath.c_str());
 		if (!result) {
-			VKA_XML_PARSER_ERROR("XML LOAD FAIL: " << result.description());
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), "XML LOAD FAIL: " << result.description());
 			return false;
 		}
 
 		pugi::xml_node registry = doc.child("registry");
 		if (!registry) {
-			VKA_XML_PARSER_ERROR("There is no <registry> tag!");
+			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), "There is no <registry> tag!");
 			return false;
 		}
 
 		pugi::xml_node commandsnode = registry.child("commands");
 		pugi::xml_node enumsnode = registry.child("enum");
+		pugi::xml_node handlesnode = registry.child("handle");
 
 		// This loop iterates over all nodes tagged with <command> within vk.xml
 
@@ -119,6 +120,14 @@ namespace VKA::PARSER::XML {
 
 			std::string enumname = nameAttr.as_string();
 			graphcontext.enumspecs.insert(enumname);
+		}
+
+		for (pugi::xml_node handlenode = handlesnode.child("handle"); handlenode; handlenode = handlenode.next_sibling("handle")) {
+			pugi::xml_attribute nameAttr = handlenode.attribute("name");
+			if (!nameAttr) { continue; }
+
+			std::string handlename = nameAttr.as_string();
+			graphcontext.typespecs.insert(handlename);
 		}
 
 		VKA_DEBUG_MSG("Vulkan Specification is loaded to memory");

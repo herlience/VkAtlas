@@ -8,11 +8,13 @@
 #include <commdlg.h>
 
 #include <fstream>
+#include <sstream>
 
 #include <imgui.h>
 
 #include "../parser/VKACustomParser/VKALexer.hpp"
 #include "../parser/VKACustomParser/VKAParser.hpp"
+#include "../common/vkainfo.h"
 
 namespace VKA::CORE::INTERFACE {
 	void renderUI(VKA::DATA::GraphContext& context) {
@@ -80,13 +82,20 @@ namespace VKA::CORE::INTERFACE {
             if (ImGui::Button("CONVERT", ImVec2(-1, 40))) {
                 VKA::PARSER::LEXER::VKALexer lexer;
                 VKA::DATA::DataFromParser globalsource;
+                VKA::DATA::ASTTree tree;
                 for (auto& path : g_selectedfiles) {
                     std::string sourcecode = readFileToString(path);
                     std::string pathstr = path.string();
 
                     std::vector<VKA::DATA::Token> tokensfromcode = lexer.tokenize(sourcecode, pathstr, context);
                     VKA::PARSER::CUSTOM::VKAParser parser{ std::move(tokensfromcode), globalsource };
-                    parser.parse();
+                    parser.parse(tree);
+                }
+
+                for (const auto& node : tree.astnodes) {
+                    std::ostringstream ss;
+                    ss << static_cast<int>(node.type);
+                    VKA_DEBUG_MSG(ss.str().c_str());
                 }
             }
         }
