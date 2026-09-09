@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cstdint>
+#include <memory>
+#include <variant>
 
 namespace VKA::DATA {
 
@@ -98,7 +100,7 @@ namespace VKA::DATA {
 		Warning, // like unresolved symbol 
 		Error,
 	};
-
+	/*
 	struct VkaNodeData {
 		uint32_t id = 0;
 		std::string commandname;
@@ -113,8 +115,65 @@ namespace VKA::DATA {
 		NodeStatus status = NodeStatus::Success;
 		std::string statusMsg; // warning or error explanation
 	};
-
+	*/
 	/////-----
+
+
+	// -- AST NODE DATA
+
+	struct ASTTree {
+		std::vector<ASTNode> astnodes;
+		uint32_t treeid = 0;
+
+		uint32_t add_node(ASTNode node) {
+			astnodes.push_back(std::move(node));
+			return static_cast<uint32_t>(astnodes.size() - 1);
+		}
+	};
+
+	enum class ASTNodeType : uint32_t {
+		Block,
+		VariableDecl,
+		FunctionCall,
+		Expression
+	};
+
+	struct ASTNode {
+		uint32_t id = 0;
+		uint32_t line = 0;
+
+		ASTNodeType type;
+
+		std::variant<BlockNodeData, VariableDeclNodeData, FunctionCallNodeData, ExpressionNodeData> data;
+		std::vector<std::string> inputRes;
+		std::vector<std::string> outputRes;
+
+		NodeStatus status = NodeStatus::Success;
+		std::string statusMsg;
+
+	};
+
+	struct BlockNodeData {
+		std::vector<uint32_t> statements_indices;
+	};
+
+	struct VariableDeclNodeData {
+		std::string type; 
+		std::string name; 
+		uint32_t init_expression; 
+	};
+
+	struct FunctionCallNodeData {
+		std::string function_name;
+		std::vector<uint32_t> arguments_indices;
+	};
+
+	struct ExpressionNodeData {
+		std::string text; 
+		bool is_address_of = false; 
+	};
+
+	////------
 
 	// -- XML PARSER DATA
 
@@ -157,14 +216,6 @@ namespace VKA::DATA {
 
 		uint32_t nextnodeid = 1;
 		uint32_t nextlinkid = 1;
-
-		VkaNodeData& createNode(const std::string& nodeName) {
-			VkaNodeData node = nodes.emplace_back();
-			node.id = nextnodeid++;
-			node.commandname = nodeName;
-
-			return node;
-		}
 
 		void createLink(uint32_t startid, uint32_t endid) {
 			LinkArrow link;

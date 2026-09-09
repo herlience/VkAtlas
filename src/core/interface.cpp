@@ -77,15 +77,16 @@ namespace VKA::CORE::INTERFACE {
             ImGui::SetNextItemWidth(-1); 
 
             
-            if (ImGui::Button("CONVERT (AST & PARSE)", ImVec2(-1, 40))) {
+            if (ImGui::Button("CONVERT", ImVec2(-1, 40))) {
                 VKA::PARSER::LEXER::VKALexer lexer;
-                VKA::PARSER::CUSTOM::VKAParser parser;
+                VKA::DATA::DataFromParser globalsource;
                 for (auto& path : g_selectedfiles) {
                     std::string sourcecode = readFileToString(path);
                     std::string pathstr = path.string();
 
                     std::vector<VKA::DATA::Token> tokensfromcode = lexer.tokenize(sourcecode, pathstr, context);
-                    parser.parseAST(tokensfromcode);
+                    VKA::PARSER::CUSTOM::VKAParser parser{ std::move(tokensfromcode), globalsource };
+                    parser.parse();
                 }
             }
         }
