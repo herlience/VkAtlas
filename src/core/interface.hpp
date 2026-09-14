@@ -15,4 +15,5 @@ namespace VKA::CORE::INTERFACE {
 	// PRIVATE FUNCTIONS
 	void openfileDialog();
 	std::string readFileToString(const std::filesystem::path& filePath);
+	std::string astNodeTypeToString(VKA::DATA::ASTNodeType type);
 }

@@ -8,7 +8,6 @@
 #include <commdlg.h>
 
 #include <fstream>
-#include <sstream>
 
 #include <imgui.h>
 
@@ -93,15 +92,24 @@ namespace VKA::CORE::INTERFACE {
                 }
 
                 for (const auto& node : tree.astnodes) {
-                    std::ostringstream ss;
-                    ss << static_cast<int>(node.type);
-                    VKA_DEBUG_MSG(ss.str().c_str());
+                    std::string tokentype = astNodeTypeToString(node.type);
+                    VKA_DEBUG_MSG(tokentype);
                 }
             }
         }
 
         ImGui::End();
 	}
+
+    std::string astNodeTypeToString(VKA::DATA::ASTNodeType type) {
+        switch (type) {
+        case VKA::DATA::ASTNodeType::Block:        return "Block";
+        case VKA::DATA::ASTNodeType::VariableDecl: return "VariableDecl";
+        case VKA::DATA::ASTNodeType::FunctionCall: return "FunctionCall";
+        case VKA::DATA::ASTNodeType::Expression:   return "Expression";
+        default:                                   return "Unknown";
+        }
+    }
 
 	void drop_callback(GLFWwindow* window, int count, const char** paths) {
 		for (int i = 0; i < count; i++) {
