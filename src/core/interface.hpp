@@ -13,6 +13,7 @@ namespace VKA::CORE::INTERFACE {
 	void drop_callback(GLFWwindow* window, int count, const char** paths);
 
 	// PRIVATE FUNCTIONS
+	std::string astNodeTypeToString(VKA::DATA::ASTNodeType type);
 	void openfileDialog();
 	std::string readFileToString(const std::filesystem::path& filePath);
 }

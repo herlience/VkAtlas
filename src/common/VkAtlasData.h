@@ -15,7 +15,6 @@
 namespace VKA::DATA {
 
 	// Forward Declarations
-	struct VkaNodeData;
 	struct ASTNode;
 
 	// -- PARSER DATA
@@ -61,12 +60,11 @@ namespace VKA::DATA {
 
 	struct LinkArrow {
 		uint32_t id = 0;
-		uint32_t startnodeid = 0;
-		uint32_t endnodeid = 0;
+		uint32_t startnpinid = 0;
+		uint32_t endpinid = 0;
 	};
 
 	struct DataFromParser {
-		std::vector<VkaNodeData> nodes;
 		std::vector<LinkArrow> connections;
 
 		std::unordered_map<std::string, Symbol> symbolmap;
@@ -77,7 +75,6 @@ namespace VKA::DATA {
 		std::vector<std::string> parserlogs;
 
 		void clear() {
-			nodes.clear();
 			connections.clear();
 			symbolmap.clear();
 			macromap.clear();
@@ -102,20 +99,6 @@ namespace VKA::DATA {
 		Error,
 	};
 
-	struct VkaNodeData {
-		uint32_t id = 0;
-		std::string commandname;
-		std::string sourcefile;
-		std::string parentfunction;
-		uint32_t line = 0;
-
-		std::vector<std::string> args;
-		std::vector<std::string> inputRes;
-		std::vector<std::string> outputRes;
-
-		NodeStatus status = NodeStatus::Success;
-		std::string statusMsg; // warning or error explanation
-	};
 
 	// -- AST DATA STRUCTS
 
@@ -167,8 +150,10 @@ namespace VKA::DATA {
 		uint32_t treeid = 0;
 
 		uint32_t add_node(ASTNode node) {
+			uint32_t newid = static_cast<uint32_t>(astnodes.size() - 1);
+			node.id = newid;
 			astnodes.push_back(std::move(node));
-			return static_cast<uint32_t>(astnodes.size() - 1);
+			return newid;
 		}
 	};
 
@@ -197,7 +182,6 @@ namespace VKA::DATA {
 
 	struct GraphContext {
 
-		std::vector<VkaNodeData> nodes;
 		std::vector<LinkArrow> links;
 
 		std::unordered_map<std::string, std::vector<RawVulkanCall>> symbolmap;
@@ -214,8 +198,8 @@ namespace VKA::DATA {
 		void createLink(uint32_t startid, uint32_t endid) {
 			LinkArrow link;
 			link.id = nextlinkid++;
-			link.startnodeid = startid;
-			link.endnodeid = endid;
+			link.startnpinid = startid;
+			link.endpinid = endid;
 
 			links.push_back(link);
 		}
