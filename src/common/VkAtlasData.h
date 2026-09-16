@@ -65,6 +65,7 @@ namespace VKA::DATA {
 	};
 
 	struct DataFromParser {
+		std::vector<ASTNode> nodes;
 		std::vector<LinkArrow> connections;
 
 		std::unordered_map<std::string, Symbol> symbolmap;

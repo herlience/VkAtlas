@@ -5,11 +5,11 @@ namespace VKA::PARSER::CUSTOM {
     class VKAParser {
     private:
         std::vector<VKA::DATA::Token> m_tokens;
-        VKA::DATA::DataFromParser& m_globalData; // Veriler doðrudan buraya akacak
+        VKA::DATA::DataFromParser& m_globalData; // Veriler doï¿½rudan buraya akacak
         size_t m_cursor = 0;
         uint32_t m_nextNodeId = 1;
 
-        // --- GÜVENLÝ YARDIMCI FONKSÝYONLAR ---
+        // --- Gï¿½VENLÄ° YARDIMCI FONKSï¿½YONLAR ---
         bool isAtEnd() const;
         VKA::DATA::Token peek() const;
         VKA::DATA::Token advance();
@@ -17,7 +17,7 @@ namespace VKA::PARSER::CUSTOM {
         VKA::DATA::Token consume(VKA::DATA::Tokentype type, const std::string& errMsg);
         VKA::DATA::Token consumeText(const std::string& text, const std::string& errMsg);
 
-        // --- AYRIÞTIRICILAR ---
+        // --- AYRIï¿½TIRICILAR ---
         void parseFunction(VKA::DATA::ASTTree& tree);
         void parseVariable(VKA::DATA::ASTTree& tree);
         void parseExpression(VKA::DATA::ASTTree& tree);
@@ -25,7 +25,7 @@ namespace VKA::PARSER::CUSTOM {
         // Kurucu (Constructor)
         VKAParser(std::vector<VKA::DATA::Token> tokenList, VKA::DATA::DataFromParser& globalData);
 
-        // Ana ayrýþtýrma döngüsü
+        // Ana ayrï¿½ï¿½tï¿½rma dï¿½ngï¿½sï¿½
         void parse(VKA::DATA::ASTTree& tree);
     };
 }

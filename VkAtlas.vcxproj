@@ -124,7 +124,7 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;IMGUI_DEFINE_MATH_OPERATORS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
@@ -181,6 +181,10 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClCompile Include="three-party\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="three-party\imgui\imgui_tables.cpp" />
     <ClCompile Include="three-party\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="three-party\imguinode\crude_json.cpp" />
+    <ClCompile Include="three-party\imguinode\imgui_canvas.cpp" />
+    <ClCompile Include="three-party\imguinode\imgui_node_editor_api.cpp" />
+    <ClCompile Include="three-party\imguinode\imgui_node_editor.cpp" />
     <ClCompile Include="src\parser\XMLParsing.cpp" />
     <ClCompile Include="three-party\pugixml\pugixml.cpp" />
     <ClCompile Include="src\parser\VKACustomParser\VKALexer.cpp" />
