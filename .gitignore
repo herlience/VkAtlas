@@ -3,6 +3,10 @@ build/
 bin/
 out/
 .vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 x64/
 x86/
 Debug/
@@ -17,6 +21,7 @@ VkAtlas/Release/
 *.o
 *.a
 *.lib
+*.pdb
 
 # IDE options
 .idea/
