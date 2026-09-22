@@ -13,11 +13,13 @@ namespace VKA::PARSER::LEXER {
 		while (m_cursor < m_source.length()) {
 			char c = m_source[m_cursor];
 
+			// 1. Boþluklar
 			if (isCharSpace(c)) {
 				advance();
 				continue;
 			}
 
+			// 2. Yeni Satýr
 			if (c == '\n') {
 				line++;
 				column = 1;
@@ -25,88 +27,109 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
+			// 3. Yorum Satýrlarý ve Bölme Operatörü (CRITICAL FIX)
+			if (c == '/') {
+				if (peeknext() == '/') { // Tek satýrlýk yorum //
+					while (m_cursor < m_source.length() && peek() != '\n') {
+						advance();
+					}
+					continue;
+				}
+				else if (peeknext() == '*') { // Çok satýrlýk yorum /* ... */
+					advance(); advance(); // /* karakterlerini atla
+					while (m_cursor < m_source.length()) {
+						if (peek() == '\n') { line++; column = 1; }
+						if (peek() == '*' && peeknext() == '/') {
+							advance(); advance(); // */ kapat
+							break;
+						}
+						advance();
+					}
+					continue;
+				}
+				else {
+					addToken(VKA::DATA::Tokentype::Operator, "/", filepath);
+					advance();
+					continue;
+				}
+			}
+
+			// 4. Oklar ve Scope Operatörleri (-> ve ::)
+			if (c == '-' && peeknext() == '>') {
+				addToken(VKA::DATA::Tokentype::Operator, "->", filepath);
+				advance(); advance();
+				continue;
+			}
+			if (c == ':' && peeknext() == ':') {
+				addToken(VKA::DATA::Tokentype::Operator, "::", filepath);
+				advance(); advance();
+				continue;
+			}
+
+			// 5. Tekli Operatörler
 			if (c == '{' || c == '[' || c == ']' || c == '}' || c == '.' || c == '=' ||
-				c == '(' || c == ')' || c == ';' || c == ',' || c == '*') {
+				c == '(' || c == ')' || c == ';' || c == ',' || c == '*' || c == '+' || c == '-') {
 				addToken(VKA::DATA::Tokentype::Operator, std::string(1, c), filepath);
 				advance();
 				continue;
 			}
 
+			// 6. Stringler
 			if (c == '"') {
 				parseString(filepath);
 				continue;
 			}
 
+			// 7. Kelimeler / Vulkan Komutlarý
 			if (isalpha(c) || c == '_') {
 				parseVk(context, filepath);
 				continue;
 			}
 
+			// 8. Karþýlaþtýrma Operatörleri
 			if (c == '<') {
 				advance();
-				if (match('<')) {
-					addToken(VKA::DATA::Tokentype::Operator, "<<", filepath);
-				}
-				else if (match('=')) {
-					addToken(VKA::DATA::Tokentype::Operator, "<=", filepath);
-				}
-				else {
-					addToken(VKA::DATA::Tokentype::Operator, "<", filepath);
-				}
+				if (match('<')) addToken(VKA::DATA::Tokentype::Operator, "<<", filepath);
+				else if (match('=')) addToken(VKA::DATA::Tokentype::Operator, "<=", filepath);
+				else addToken(VKA::DATA::Tokentype::Operator, "<", filepath);
 				continue;
 			}
 
 			if (c == '>') {
 				advance();
-				if (match('>')) {
-					addToken(VKA::DATA::Tokentype::Operator, ">>", filepath);
-				}
-				else if (match('=')) {
-					addToken(VKA::DATA::Tokentype::Operator, ">=", filepath);
-				}
-				else {
-					addToken(VKA::DATA::Tokentype::Operator, ">", filepath);
-				}
+				if (match('>')) addToken(VKA::DATA::Tokentype::Operator, ">>", filepath);
+				else if (match('=')) addToken(VKA::DATA::Tokentype::Operator, ">=", filepath);
+				else addToken(VKA::DATA::Tokentype::Operator, ">", filepath);
 				continue;
 			}
 
 			if (c == '&') {
 				advance();
-				if (match('&')) {
-					addToken(VKA::DATA::Tokentype::Operator, "&&", filepath);
-				}
-				else {
-					addToken(VKA::DATA::Tokentype::Operator, "&", filepath);
-				}
+				if (match('&')) addToken(VKA::DATA::Tokentype::Operator, "&&", filepath);
+				else addToken(VKA::DATA::Tokentype::Operator, "&", filepath);
 				continue;
 			}
 
 			if (c == '|') {
 				advance();
-				if (match('|')) {
-					addToken(VKA::DATA::Tokentype::Operator, "||", filepath);
-				}
-				else {
-					addToken(VKA::DATA::Tokentype::Operator, "|", filepath);
-				}
+				if (match('|')) addToken(VKA::DATA::Tokentype::Operator, "||", filepath);
+				else addToken(VKA::DATA::Tokentype::Operator, "|", filepath);
 				continue;
 			}
 
+			// 9. Makrolar (#include, #define)
 			if (c == '#') {
 				std::string directive;
-
 				while (m_cursor < m_source.length()) {
 					char current = peek();
-					if (isCharSpace(current) || current == '\n' || current == '<' || current == '"') {
-						break;
-					}
+					if (isCharSpace(current) || current == '\n' || current == '<' || current == '"') break;
 					directive.push_back(advance());
 				}
-
 				addToken(VKA::DATA::Tokentype::Macro, directive, filepath);
 				continue;
 			}
 
+			// 10. Sayýlar
 			if (isDigit(c)) {
 				parseDigit(filepath);
 				continue;
@@ -165,10 +188,7 @@ namespace VKA::PARSER::LEXER {
 		tokens.push_back(t);
 	}
 
-	void VKALexer::parseVk(
-		const VKA::DATA::GraphContext& context,
-		const std::string& filepath
-	) {
+	void VKALexer::parseVk(const VKA::DATA::GraphContext& context, const std::string& filepath) {
 		std::string kelime;
 
 		while (m_cursor < m_source.length()) {
@@ -176,33 +196,42 @@ namespace VKA::PARSER::LEXER {
 			if (c == ' ' || c == '\n' || c == '\t' || c == '\r' ||
 				c == '{' || c == '}' || c == '[' || c == ']' ||
 				c == ';' || c == '(' || c == ')' || c == '<' || c == '>' ||
-				c == '.' || c == '=' || c == ',' || c == '*' || c == '&') {
+				c == '.' || c == '=' || c == ',' || c == '*' || c == '&' ||
+				c == '+' || c == '-' || c == '/' || c == ':') {
 				break;
 			}
 			kelime.push_back(c);
 			advance();
 		}
 
-		if (kelime.empty()) {
-			return;
+		if (kelime.empty()) return;
+
+		bool isVulkanPrefix = (kelime.size() >= 2) &&
+			((kelime[0] == 'v' && kelime[1] == 'k') ||
+				(kelime[0] == 'V' && kelime[1] == 'k') ||
+				(kelime[0] == 'V' && kelime[1] == 'K'));
+
+		if (isVulkanPrefix) {
+			if (context.commandspecs.find(kelime) != context.commandspecs.end()) {
+				addToken(VKA::DATA::Tokentype::Vkcommand, kelime, filepath);
+				return;
+			}
+			if (context.enumspecs.find(kelime) != context.enumspecs.end()) {
+				addToken(VKA::DATA::Tokentype::Vkenum, kelime, filepath);
+				return;
+			}
+			if (context.typespecs.find(kelime) != context.typespecs.end()) {
+				addToken(VKA::DATA::Tokentype::Vktype, kelime, filepath);
+				return;
+			}
 		}
 
-		if (context.commandspecs.find(kelime) != context.commandspecs.end()) {
-			addToken(VKA::DATA::Tokentype::Vkcommand, kelime, filepath);
-		}
-		else if (context.enumspecs.find(kelime) != context.enumspecs.end()) {
-			addToken(VKA::DATA::Tokentype::Vkenum, kelime, filepath);
-		}
-		else if (context.typespecs.find(kelime) != context.typespecs.end()) {
-			addToken(VKA::DATA::Tokentype::Vktype, kelime, filepath);
-		}
-		else {
-			addToken(VKA::DATA::Tokentype::Identifier, kelime, filepath);
-		}
+		// Standart C++ Deðiþkeni / Identifier
+		addToken(VKA::DATA::Tokentype::Identifier, kelime, filepath);
 	}
 
 	void VKALexer::parseString(const std::string& filepath) {
-		advance();
+		advance(); 
 		std::string strcontext;
 
 		while (m_cursor < m_source.length()) {
@@ -213,14 +242,15 @@ namespace VKA::PARSER::LEXER {
 				break;
 			}
 
-			if (c == '\n') {
-				break;
-			}
+			if (c == '\n') break;
 
-			if (c == '\\' && peeknext() == '"') {
+			if (c == '\\') {
 				advance();
-				strcontext.push_back(advance());
-				continue;
+				char next = peek();
+				if (next == 'n') { strcontext.push_back('\n'); advance(); continue; }
+				if (next == 't') { strcontext.push_back('\t'); advance(); continue; }
+				if (next == '"') { strcontext.push_back('"'); advance(); continue; }
+				if (next == '\\') { strcontext.push_back('\\'); advance(); continue; }
 			}
 
 			strcontext.push_back(advance());
@@ -231,8 +261,8 @@ namespace VKA::PARSER::LEXER {
 
 	void VKALexer::parseDigit(const std::string& filepath) {
 		std::string digit;
-
 		bool isfloat = false;
+
 		while (m_cursor < m_source.length()) {
 			char c = peek();
 
@@ -243,8 +273,8 @@ namespace VKA::PARSER::LEXER {
 				isfloat = true;
 				digit.push_back(advance());
 			}
-			else if ((c == 'f' || c == 'F') && isfloat) {
-				advance();
+			else if ((c == 'f' || c == 'F' || c == 'u' || c == 'U') && isfloat) {
+				digit.push_back(advance()); 
 				break;
 			}
 			else {

@@ -15,12 +15,10 @@
 #include "../parser/VKACustomParser/VKAParser.hpp"
 #include "../common/vkainfo.h"
 
-// Node Editor header'ını projene dahil ediyoruz
 #include "../ui/nodeEditor.h"
 
 namespace VKA::CORE::INTERFACE {
 
-    // Node Editor tuvalinin ve parse edilen ağacın her frame hayatta kalması için statik yapıyoruz
     static VKA::UI::nodeEditor s_astEditor;
     static VKA::DATA::ASTTree s_currentTree;
     static bool s_showNodeEditor = false;
@@ -36,18 +34,15 @@ namespace VKA::CORE::INTERFACE {
 
         ImGui::Begin("VkAtlas Converter", nullptr, window_flags);
 
-        // EĞER ÇEVİRİ YAPILDIYSA VE AĞAÇ DOLUYSA: Node Editor Tuvalini Göster
         if (s_showNodeEditor && !s_currentTree.astnodes.empty()) {
-            
+
             if (ImGui::Button("<- Back to Files", ImVec2(150, 30))) {
-                s_showNodeEditor = false; // Dosya seçme ekranına geri dön
+                s_showNodeEditor = false; 
             }
             ImGui::Separator();
-            
-            // Düğüm tuvalini devasa ana penceremizin tam içine gömüyoruz
-            s_astEditor.draw(s_currentTree);
+
+            s_astEditor.draw(s_currentTree, context);
         }
-        // EĞER HENÜZ ÇEVİRİ YAPILMADIYSA: Dosya Seçme Ekranını Göster
         else {
             if (g_selectedfiles.empty()) {
                 ImVec2 boxSize = ImVec2(400, 200);
@@ -57,7 +52,7 @@ namespace VKA::CORE::INTERFACE {
                 ImGui::SetCursorPos(cursorPadding);
 
                 if (ImGui::Button("Drag files here\n\nor click to select file", boxSize)) {
-                    openfileDialog(); 
+                    openfileDialog();
                 }
             }
             else {
@@ -93,29 +88,31 @@ namespace VKA::CORE::INTERFACE {
                 }
 
                 ImGui::Separator();
-                
-                ImGui::SetNextItemWidth(-1); 
 
-                // CONVERT BUTONU
+                ImGui::SetNextItemWidth(-1);
+
+                
                 if (ImGui::Button("CONVERT", ImVec2(-1, 40))) {
                     VKA::PARSER::LEXER::VKALexer lexer;
                     VKA::DATA::DataFromParser globalsource;
-                    
-                    // Önceki çeviriden kalan eski ağacı temizle
-                    s_currentTree.astnodes.clear(); 
+
+                    s_currentTree.astnodes.clear();
+                    context.links.clear();
 
                     for (auto& path : g_selectedfiles) {
                         std::string sourcecode = readFileToString(path);
                         std::string pathstr = path.string();
 
                         std::vector<VKA::DATA::Token> tokensfromcode = lexer.tokenize(sourcecode, pathstr, context);
-                        
-                        // Veriyi yerel değişken yerine statik s_currentTree içine yazıyoruz
+
                         VKA::PARSER::CUSTOM::VKAParser parser{ std::move(tokensfromcode), globalsource };
                         parser.parse(s_currentTree);
+
+                        for (const auto& node : s_currentTree.astnodes) {
+                            parser.flatasttree(node.id, UINT32_MAX, s_currentTree, context);
+                        }
                     }
 
-                    // Node editor'ü görünür yap ve ızgara (layout) düzenini sıfırla
                     s_showNodeEditor = true;
                     s_astEditor.clearLayout();
 

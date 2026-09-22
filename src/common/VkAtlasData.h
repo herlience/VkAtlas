@@ -12,6 +12,10 @@
 #include <memory>
 #include <variant>
 
+#include <imgui_node_editor.h>
+
+namespace ed = ax::NodeEditor;
+
 namespace VKA::DATA {
 
 	// Forward Declarations
@@ -75,13 +79,17 @@ namespace VKA::DATA {
 		uint32_t totallinesparsed = 0;
 		std::vector<std::string> parserlogs;
 
+		uint32_t nextpinid = 1000;
+
 		void clear() {
+			nodes.clear();
 			connections.clear();
 			symbolmap.clear();
 			macromap.clear();
 			parserlogs.clear();
 			totalfilesparsed = 0;
 			totallinesparsed = 0;
+			nextpinid = 1000;
 		}
 	};
 
@@ -92,7 +100,7 @@ namespace VKA::DATA {
 		int line = 0;
 	};
 
-	// -- NODE DATA
+	// -- NODE & PIN DATA
 
 	enum class NodeStatus : uint8_t {
 		Success,
@@ -100,6 +108,17 @@ namespace VKA::DATA {
 		Error,
 	};
 
+	enum class PinKind : uint32_t {
+		Input,
+		Output
+	};
+
+	struct Pin {
+		uint32_t id = 0;           
+		uint32_t node_id = 0;      
+		PinKind kind = PinKind::Input;
+		std::string name;          
+	};
 
 	// -- AST DATA STRUCTS
 
@@ -139,8 +158,12 @@ namespace VKA::DATA {
 		ASTNodeType type = ASTNodeType::Expression;
 
 		std::variant<BlockNodeData, VariableDeclNodeData, FunctionCallNodeData, ExpressionNodeData> data;
-		std::vector<std::string> inputRes;
-		std::vector<std::string> outputRes;
+
+		uint32_t input_pin_id = UINT32_MAX;       
+		uint32_t output_pin_id = UINT32_MAX;      
+
+		std::vector<Pin> input_pins;               
+		std::vector<Pin> output_pins;              
 
 		NodeStatus status = NodeStatus::Success;
 		std::string statusMsg;
@@ -151,7 +174,7 @@ namespace VKA::DATA {
 		uint32_t treeid = 0;
 
 		uint32_t add_node(ASTNode node) {
-			uint32_t newid = static_cast<uint32_t>(astnodes.size() - 1);
+			uint32_t newid = static_cast<uint32_t>(astnodes.size() + 1);
 			node.id = newid;
 			astnodes.push_back(std::move(node));
 			return newid;
@@ -185,6 +208,9 @@ namespace VKA::DATA {
 
 		std::vector<LinkArrow> links;
 
+		// Pin ID'si üzerinden doðrudan Pin nesnesine O(1) hýzlý eriþim haritasý
+		std::unordered_map<uint32_t, Pin> pin_map; 
+
 		std::unordered_map<std::string, std::vector<RawVulkanCall>> symbolmap;
 
 		std::unordered_map<std::string, VulkanCommandSpec> commandspecs;
@@ -194,6 +220,7 @@ namespace VKA::DATA {
 		std::unordered_map<std::string, std::vector<std::string>> declaredvariables;
 
 		uint32_t nextnodeid = 1;
+		uint32_t nextpinid = 1000; 
 		uint32_t nextlinkid = 1;
 
 		void createLink(uint32_t startid, uint32_t endid) {

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <variant>
+#include <unordered_set>
 
 #include <imgui.h>
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -21,7 +22,7 @@ namespace VKA::UI {
         inline nodeEditor();
         inline ~nodeEditor();
 
-        inline void draw(const VKA::DATA::ASTTree& tree, const char* title = "AST Node Editor");
+        inline void draw(const VKA::DATA::ASTTree& tree, const VKA::DATA::GraphContext& ctx, const char* title = "AST Node Editor");
         inline void clearLayout();
 
     private:
@@ -29,14 +30,16 @@ namespace VKA::UI {
         bool m_needsLayout = true;
         size_t m_lastNodeCount = 0;
 
-        inline ImVec2 gridPosForIndex(size_t index, float xStep = 260.0f, float yStep = 160.0f, int cols = 5) const;
-        inline void DrawUEPinIcon(bool isConnected, ImU32 color);
+        inline void DrawPinIcon(bool isConnected, ImU32 color);
+
+        inline void calculateNodeLayout(uint32_t nodeid, int depth, float& currentY, const VKA::DATA::ASTTree& tree, std::unordered_set<uint32_t>& visited) const;
     };
 
-        namespace detail {
+    namespace detail {
         inline uint64_t packNodeId(uint32_t treeId, uint32_t nodeId) {
             return (static_cast<uint64_t>(treeId) << 32) | static_cast<uint64_t>(nodeId);
         }
+
         inline const char* ToString(VKA::DATA::ASTNodeType t) {
             using T = VKA::DATA::ASTNodeType;
             switch (t) {
@@ -47,7 +50,7 @@ namespace VKA::UI {
             default:              return "Unknown";
             }
         }
-        // Unreal Engine Tür Renkleri (Header için)
+
         inline ImU32 GetNodeHeaderColor(VKA::DATA::ASTNodeType t) {
             using T = VKA::DATA::ASTNodeType;
             switch (t) {
@@ -58,14 +61,7 @@ namespace VKA::UI {
             default:              return IM_COL32(120, 120, 120, 255);
             }
         }
-                // Node'a bağlı stabil pin id üretici (node anahtarına göre port ve yön)
-        inline ed::PinId MakePinId(uint64_t nodePacked, uint16_t port, bool isInput) {
-            const uint64_t key = (nodePacked << 8) | (static_cast<uint64_t>(port) << 1) | (isInput ? 1ull : 0ull);
-            return ed::PinId(static_cast<uintptr_t>(key));
-        }
     }
-
-
 
     inline nodeEditor::nodeEditor() {
         if (!m_ctx) m_ctx = ed::CreateEditor();
@@ -75,14 +71,7 @@ namespace VKA::UI {
         if (m_ctx) { ed::DestroyEditor(m_ctx); m_ctx = nullptr; }
     }
 
-    inline ImVec2 nodeEditor::gridPosForIndex(size_t index, float xStep, float yStep, int cols) const {
-        const int col = static_cast<int>(index % cols);
-        const int row = static_cast<int>(index / cols);
-        return ImVec2(col * xStep, row * yStep);
-    }
-
-    // Minik UE stili Daire Pin İkonu
-    inline void nodeEditor::DrawUEPinIcon(bool isConnected, ImU32 color) {
+    inline void nodeEditor::DrawPinIcon(bool isConnected, ImU32 color) {
         const float size = 10.0f;
         ImVec2 pos = ImGui::GetCursorScreenPos();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -98,7 +87,37 @@ namespace VKA::UI {
 
     inline void nodeEditor::clearLayout() { m_needsLayout = true; }
 
-        inline void nodeEditor::draw(const VKA::DATA::ASTTree& tree, const char* title) {
+    inline void nodeEditor::calculateNodeLayout(uint32_t nodeid, int depth, float& currentY, const VKA::DATA::ASTTree& tree, std::unordered_set<uint32_t>& visited) const {
+
+        if (visited.count(nodeid)) return;
+        visited.insert(nodeid);
+
+        const VKA::DATA::ASTNode* nodePtr = nullptr;
+        for (const auto& n : tree.astnodes) {
+            if (n.id == nodeid) { nodePtr = &n; break; }
+        }
+        if (!nodePtr) return;
+
+        uint64_t packedId = detail::packNodeId(tree.treeid, nodePtr->id);
+        ed::SetNodePosition(ed::NodeId(packedId), ImVec2(depth * 350.0f, currentY));
+
+        currentY += 160.0f; 
+
+        if (auto* f = std::get_if<VKA::DATA::FunctionCallNodeData>(&nodePtr->data)) {
+            for (auto argId : f->arguments_indices)
+                calculateNodeLayout(argId, depth + 1, currentY, tree, visited);
+        }
+        else if (auto* v = std::get_if<VKA::DATA::VariableDeclNodeData>(&nodePtr->data)) {
+            if (v->init_expression != UINT32_MAX)
+                calculateNodeLayout(v->init_expression, depth + 1, currentY, tree, visited);
+        }
+        else if (auto* b = std::get_if<VKA::DATA::BlockNodeData>(&nodePtr->data)) {
+            for (auto stmtId : b->statements_indices)
+                calculateNodeLayout(stmtId, depth, currentY, tree, visited); 
+        }
+    }
+
+    inline void nodeEditor::draw(const VKA::DATA::ASTTree& tree, const VKA::DATA::GraphContext& ctx, const char* title) {
         if (!m_ctx) m_ctx = ed::CreateEditor();
 
         ed::SetCurrentEditor(m_ctx);
@@ -114,93 +133,67 @@ namespace VKA::UI {
 
             ImGui::PushID(static_cast<int>(packedId));
 
-            // Header renkleri (UE tarzı)
             const ImU32 headerCol = detail::GetNodeHeaderColor(n.type);
-            const ImU32 headerColHover = IM_COL32(((headerCol>>0)&0xFF) + 15 > 255 ? 255 : ((headerCol>>0)&0xFF) + 15,
-                                                  ((headerCol>>8)&0xFF) + 15 > 255 ? 255 : ((headerCol>>8)&0xFF) + 15,
-                                                  ((headerCol>>16)&0xFF) + 15 > 255 ? 255 : ((headerCol>>16)&0xFF) + 15, 255);
-            const ImU32 headerColSelect = IM_COL32(((headerCol>>0)&0xFF) + 30 > 255 ? 255 : ((headerCol>>0)&0xFF) + 30,
-                                                   ((headerCol>>8)&0xFF) + 30 > 255 ? 255 : ((headerCol>>8)&0xFF) + 30,
-                                                   ((headerCol>>16)&0xFF) + 30 > 255 ? 255 : ((headerCol>>16)&0xFF) + 30, 255);
 
-                        ed::BeginNode(nodeId);
+            ed::BeginNode(nodeId);
 
-            // Başlık (UE tarzı renkli metin)
             ImGui::TextColored(ImColor(headerCol), "%s", detail::ToString(n.type));
             ImGui::SameLine();
             ImGui::TextDisabled("#%u", n.id);
             ImGui::Separator();
 
-            // Sütunlar yok, her şeyi tertemiz alt alta diziyoruz
-            // Sol/Giriş Pinleri
-            if (n.type == VKA::DATA::ASTNodeType::Block) {
-                ed::BeginPin(detail::MakePinId(packedId, 100, true), ed::PinKind::Input);
-                DrawUEPinIcon(false, headerCol);
-                ImGui::SameLine(); ImGui::TextUnformatted("Exec In");
+            if (n.input_pin_id != UINT32_MAX) {
+                ed::BeginPin(ed::PinId(n.input_pin_id), ed::PinKind::Input);
+                DrawPinIcon(false, headerCol);
+                ImGui::SameLine();
+                ImGui::TextUnformatted("In");
                 ed::EndPin();
-            } else if (n.type == VKA::DATA::ASTNodeType::FunctionCall) {
-                if (const auto* f = std::get_if<VKA::DATA::FunctionCallNodeData>(&n.data)) {
-                    for (size_t ai = 0; ai < f->arguments_indices.size(); ++ai) {
-                        ed::BeginPin(detail::MakePinId(packedId, static_cast<uint16_t>(ai), true), ed::PinKind::Input);
-                        DrawUEPinIcon(false, headerCol);
-                        ImGui::SameLine(); ImGui::Text("arg%zu", ai);
-                        ed::EndPin();
-                    }
-                }
             }
 
-            // Düğümün ana içeriği (metinler)
             if (auto* b = std::get_if<VKA::DATA::BlockNodeData>(&n.data)) {
                 ImGui::Text("Statements: %zu", b->statements_indices.size());
-            } else if (auto* v = std::get_if<VKA::DATA::VariableDeclNodeData>(&n.data)) {
+            }
+            else if (auto* v = std::get_if<VKA::DATA::VariableDeclNodeData>(&n.data)) {
                 ImGui::Text("%s %s", v->type.c_str(), v->name.c_str());
-            } else if (auto* f = std::get_if<VKA::DATA::FunctionCallNodeData>(&n.data)) {
+            }
+            else if (auto* f = std::get_if<VKA::DATA::FunctionCallNodeData>(&n.data)) {
                 ImGui::Text("%s(...)", f->function_name.c_str());
-            } else if (auto* e = std::get_if<VKA::DATA::ExpressionNodeData>(&n.data)) {
+                // Argümanları içeriğe metin olarak dök (pin kalabalığı yapmasın, linkler yeterli)
+                ImGui::TextDisabled("Args: %zu", f->arguments_indices.size());
+            }
+            else if (auto* e = std::get_if<VKA::DATA::ExpressionNodeData>(&n.data)) {
                 ImGui::TextWrapped("%s%s", e->is_address_of ? "&" : "", e->text.c_str());
             }
 
-            // Sağ/Çıkış Pinleri
-            if (n.type == VKA::DATA::ASTNodeType::Block) {
-                ed::BeginPin(detail::MakePinId(packedId, 101, false), ed::PinKind::Output);
-                ImGui::TextUnformatted("Exec Out");
-                ImGui::SameLine(); DrawUEPinIcon(false, headerCol);
-                ed::EndPin();
-            } else if (n.type == VKA::DATA::ASTNodeType::VariableDecl) {
-                if (const auto* v = std::get_if<VKA::DATA::VariableDeclNodeData>(&n.data)) {
-                    ed::BeginPin(detail::MakePinId(packedId, 0, false), ed::PinKind::Output);
-                    ImGui::Text("%s", v->name.c_str());
-                    ImGui::SameLine(); DrawUEPinIcon(false, headerCol);
-                    ed::EndPin();
-                }
-            } else if (n.type == VKA::DATA::ASTNodeType::FunctionCall) {
-                ed::BeginPin(detail::MakePinId(packedId, 0, false), ed::PinKind::Output);
-                ImGui::TextUnformatted("ret");
-                ImGui::SameLine(); DrawUEPinIcon(false, headerCol);
-                ed::EndPin();
-            } else if (n.type == VKA::DATA::ASTNodeType::Expression) {
-                ed::BeginPin(detail::MakePinId(packedId, 0, false), ed::PinKind::Output);
-                ImGui::TextUnformatted("value");
-                ImGui::SameLine(); DrawUEPinIcon(false, headerCol);
+            if (n.output_pin_id != UINT32_MAX) {
+                ed::BeginPin(ed::PinId(n.output_pin_id), ed::PinKind::Output);
+                ImGui::TextUnformatted("Out");
+                ImGui::SameLine();
+                DrawPinIcon(false, headerCol);
                 ed::EndPin();
             }
 
-            // Alt bilgi
             ImGui::Separator();
             ImGui::TextDisabled("line: %u", n.line);
 
             ed::EndNode();
-
             ImGui::PopID();
+        }
 
+        for (const auto& link : ctx.links) {
+            ed::Link(ed::LinkId(link.id), ed::PinId(link.startnpinid), ed::PinId(link.endpinid));
         }
 
         ed::End();
 
         if (m_needsLayout || m_lastNodeCount != tree.astnodes.size()) {
-            for (size_t i = 0; i < createdNodeIds.size(); ++i) {
-                ed::SetNodePosition(createdNodeIds[i], gridPosForIndex(i));
+            float startY = 0.0f;
+            std::unordered_set<uint32_t> visited;
+
+            for (const auto& n : tree.astnodes) {
+                calculateNodeLayout(n.id, 0, startY, tree, visited);
             }
+
             m_lastNodeCount = tree.astnodes.size();
             m_needsLayout = false;
         }
@@ -208,5 +201,4 @@ namespace VKA::UI {
         ed::SetCurrentEditor(nullptr);
     }
 
-
-} // namespace VKA::UI
+} // VKA::UI

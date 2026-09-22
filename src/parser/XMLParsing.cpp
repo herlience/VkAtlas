@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <vector>
-
+#include <string>
 
 namespace fs = std::filesystem;
 
@@ -31,7 +31,6 @@ namespace VKA::PARSER::XML {
 			}
 		}
 
-		// if possiblepaths will fail, this try-catch loop will find vk.xml with in-depth analysis
 		try {
 			for (const auto& entry : fs::recursive_directory_iterator(sdkDir)) {
 				if (entry.is_regular_file() && entry.path().stem() == "vk" && entry.path().extension() == ".xml") {
@@ -49,9 +48,10 @@ namespace VKA::PARSER::XML {
 
 	bool XMLParsing::initAndParse(VKA::DATA::GraphContext& graphcontext) {
 		std::string xmlpath = findXMLPath();
-		if (xmlpath.empty()) { 
+		if (xmlpath.empty()) {
 			VKA_ERROR(ErrorTypeToString(ErrorType::VKA_XML_PARSER_ERROR), "XML FILE IS EMPTY");
-			return false; }
+			return false;
+		}
 
 		pugi::xml_document doc;
 		pugi::xml_parse_result result = doc.load_file(xmlpath.c_str());
@@ -66,71 +66,103 @@ namespace VKA::PARSER::XML {
 			return false;
 		}
 
+		
+		pugi::xml_node typesNode = registry.child("types");
+		if (typesNode) {
+			for (pugi::xml_node typeChild = typesNode.child("type"); typeChild; typeChild = typeChild.next_sibling("type")) {
+				std::string name = typeChild.child_value("name");
+				if (name.empty()) {
+					name = typeChild.attribute("name").as_string();
+				}
+
+				if (!name.empty()) {
+					std::string category = typeChild.attribute("category").as_string();
+					if (category == "handle" || category == "struct" || category == "union" || category == "enum") {
+						graphcontext.typespecs.insert(name);
+					}
+				}
+			}
+		}
+
+		for (pugi::xml_node enumsGroup = registry.child("enums"); enumsGroup; enumsGroup = enumsGroup.next_sibling("enums")) {
+			std::string enumTypeName = enumsGroup.attribute("name").as_string();
+			if (!enumTypeName.empty()) {
+				graphcontext.enumspecs.insert(enumTypeName);
+			}
+
+			for (pugi::xml_node enumnode = enumsGroup.child("enum"); enumnode; enumnode = enumnode.next_sibling("enum")) {
+				std::string enumValueName = enumnode.attribute("name").as_string();
+				if (!enumValueName.empty()) {
+					graphcontext.enumspecs.insert(enumValueName);
+				}
+			}
+		}
+
 		pugi::xml_node commandsnode = registry.child("commands");
-		pugi::xml_node enumsnode = registry.child("enum");
-		pugi::xml_node handlesnode = registry.child("handle");
+		if (commandsnode) {
+			for (pugi::xml_node cmdNode = commandsnode.child("command"); cmdNode; cmdNode = cmdNode.next_sibling("command")) {
 
-		// This loop iterates over all nodes tagged with <command> within vk.xml
+				pugi::xml_attribute aliasAttr = cmdNode.attribute("alias");
+				if (aliasAttr) {
+					std::string cmdName = cmdNode.attribute("name").as_string();
+					std::string targetAlias = aliasAttr.as_string();
 
-		for (pugi::xml_node cmdNode = commandsnode.child("command"); cmdNode; cmdNode = cmdNode.next_sibling("command")) {
-			pugi::xml_node protoNode = cmdNode.child("proto");
-			if (!protoNode) { continue; }
-
-			VKA::DATA::VulkanCommandSpec spec;
-			spec.name = protoNode.child_value("name");
-			spec.returntype = protoNode.child_value("type");
-
-			std::string queueAttribute = cmdNode.attribute("queues").value();
-			spec.renderpassscope = cmdNode.attribute("renderpass").value();
-
-			if (!queueAttribute.empty()) {
-				size_t start = 0, end = 0;
-				while ((end = queueAttribute.find(',', start)) != std::string::npos) {
-					spec.queues.push_back(queueAttribute.substr(start, end - start));
-					start = end + 1;
-				}
-				spec.queues.push_back(queueAttribute.substr(start));
-			}
-
-			// and this loop finds all parameters for commandspec
-			for (pugi::xml_node paramNode = cmdNode.child("param"); paramNode; paramNode = paramNode.next_sibling("param")) {
-				VKA::DATA::VulkanParamSpec param;
-				param.type = paramNode.child_value("type");
-				param.name = paramNode.child_value("name");
-
-				std::string fullParamText = paramNode.text().get();
-				for (pugi::xml_node child = paramNode.first_child(); child; child = child.next_sibling()) {
-					fullParamText += child.value();
+					if (graphcontext.commandspecs.find(targetAlias) != graphcontext.commandspecs.end()) {
+						VKA::DATA::VulkanCommandSpec aliasSpec = graphcontext.commandspecs[targetAlias];
+						aliasSpec.name = cmdName;
+						graphcontext.commandspecs[cmdName] = aliasSpec;
+					}
+					continue;
 				}
 
-				if (fullParamText.find('*') != std::string::npos) param.isPtr = true;
-				if (fullParamText.find("const") != std::string::npos) param.isConst = true;
-				if (param.type.rfind("Vk", 0) == 0) { param.isStruct = true; }
-				if (fullParamText.find('[') != std::string::npos) param.isArray = true;
+				pugi::xml_node protoNode = cmdNode.child("proto");
+				if (!protoNode) continue;
 
-				spec.parameters.push_back(param);
+				VKA::DATA::VulkanCommandSpec spec;
+				spec.name = protoNode.child_value("name");
+				spec.returntype = protoNode.child_value("type");
+
+				std::string queueAttribute = cmdNode.attribute("queues").value();
+				spec.renderpassscope = cmdNode.attribute("renderpass").value();
+
+				if (!queueAttribute.empty()) {
+					size_t start = 0, end = 0;
+					while ((end = queueAttribute.find(',', start)) != std::string::npos) {
+						spec.queues.push_back(queueAttribute.substr(start, end - start));
+						start = end + 1;
+					}
+					spec.queues.push_back(queueAttribute.substr(start));
+				}
+
+				for (pugi::xml_node paramNode = cmdNode.child("param"); paramNode; paramNode = paramNode.next_sibling("param")) {
+					VKA::DATA::VulkanParamSpec param;
+					param.type = paramNode.child_value("type");
+					param.name = paramNode.child_value("name");
+
+					std::string rawParamText;
+					for (pugi::xml_node child = paramNode.first_child(); child; child = child.next_sibling()) {
+						if (child.type() == pugi::node_pcdata) {
+							rawParamText += child.value();
+						}
+						else {
+							rawParamText += child.child_value();
+						}
+					}
+
+					if (rawParamText.find('*') != std::string::npos) param.isPtr = true;
+					if (rawParamText.find("const") != std::string::npos) param.isConst = true;
+					if (param.type.rfind("Vk", 0) == 0) param.isStruct = true;
+					if (rawParamText.find('[') != std::string::npos) param.isArray = true;
+
+					spec.parameters.push_back(param);
+				}
+
+				graphcontext.commandspecs[spec.name] = spec;
+				graphcontext.typespecs.insert(spec.name);
 			}
-			graphcontext.commandspecs[spec.name] = spec;
 		}
 
-		// This loop iterates over all nodes tagged with <enum> within vk.xml
-		for (pugi::xml_node enumnode = enumsnode.child("enum"); enumnode; enumnode = enumnode.next_sibling("enum")) {
-			pugi::xml_attribute nameAttr = enumnode.attribute("name");
-			if (!nameAttr) { continue; }
-
-			std::string enumname = nameAttr.as_string();
-			graphcontext.enumspecs.insert(enumname);
-		}
-
-		for (pugi::xml_node handlenode = handlesnode.child("handle"); handlenode; handlenode = handlenode.next_sibling("handle")) {
-			pugi::xml_attribute nameAttr = handlenode.attribute("name");
-			if (!nameAttr) { continue; }
-
-			std::string handlename = nameAttr.as_string();
-			graphcontext.typespecs.insert(handlename);
-		}
-
-		VKA_DEBUG_MSG("Vulkan Specification is loaded to memory");
+		VKA_DEBUG_MSG("Vulkan Specification is loaded to memory " << graphcontext.commandspecs.size());
 		return true;
 	}
 } // VKA::PARSER::XML
