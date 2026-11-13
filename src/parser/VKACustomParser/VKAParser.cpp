@@ -34,14 +34,16 @@ namespace VKA::PARSER::CUSTOM {
     }
 
     // -- PARSER FUNCTIONS 
-    
+
     void VKAParser::parseFunction(VKA::DATA::ASTTree& tree) {
-        VKA::DATA::Token funcToken = advance(); 
+        VKA::DATA::Token funcToken = advance();
 
         VKA::DATA::ASTNode funcNode;
         funcNode.type = VKA::DATA::ASTNodeType::FunctionCall;
         funcNode.input_pin_id = m_globalData.nextpinid++;
         funcNode.output_pin_id = m_globalData.nextpinid++;
+
+        funcNode.line = funcToken.line; 
 
         VKA::DATA::FunctionCallNodeData calldata;
         calldata.function_name = funcToken.text;
@@ -60,10 +62,12 @@ namespace VKA::PARSER::CUSTOM {
 
             VKA::DATA::ASTNode argNode;
             argNode.id = argIndex;
-            argNode.type = VKA::DATA::ASTNodeType::Expression; 
+            argNode.type = VKA::DATA::ASTNodeType::Expression;
             argNode.input_pin_id = m_globalData.nextpinid++;
             argNode.output_pin_id = m_globalData.nextpinid++;
             argNode.data = VKA::DATA::ExpressionNodeData{ .text = peek().text };
+
+            argNode.line = peek().line; 
 
             tree.astnodes.push_back(argNode);
             argument_indices.push_back(argIndex);
@@ -71,7 +75,7 @@ namespace VKA::PARSER::CUSTOM {
             advance();
         }
 
-        if (!isAtEnd() && peek().text == ")") advance(); 
+        if (!isAtEnd() && peek().text == ")") advance();
 
         calldata.arguments_indices = argument_indices;
         funcNode.data = calldata;
@@ -81,7 +85,9 @@ namespace VKA::PARSER::CUSTOM {
     }
 
     void VKAParser::parseVariable(VKA::DATA::ASTTree& tree) {
-        std::string var_type = advance().text; 
+        VKA::DATA::Token startToken = advance();
+        std::string var_type = startToken.text;
+        uint32_t currentLine = startToken.line;
 
         std::string var_name = "";
         if (!isAtEnd() && peek().type == VKA::DATA::Tokentype::Identifier) {
@@ -91,10 +97,10 @@ namespace VKA::PARSER::CUSTOM {
         uint32_t init_expr_index = UINT32_MAX;
 
         if (!isAtEnd() && peek().text == "=") {
-            advance(); 
+            advance();
             if (peek().type == VKA::DATA::Tokentype::Vkcommand) {
                 init_expr_index = static_cast<uint32_t>(tree.astnodes.size());
-                parseFunction(tree); 
+                parseFunction(tree);
             }
             else if (!isAtEnd()) {
                 init_expr_index = static_cast<uint32_t>(tree.astnodes.size());
@@ -105,6 +111,7 @@ namespace VKA::PARSER::CUSTOM {
                 exprNode.input_pin_id = m_globalData.nextpinid++;
                 exprNode.output_pin_id = m_globalData.nextpinid++;
                 exprNode.data = VKA::DATA::ExpressionNodeData{ .text = peek().text };
+                exprNode.line = peek().line;
 
                 tree.astnodes.push_back(exprNode);
                 advance();
@@ -115,7 +122,7 @@ namespace VKA::PARSER::CUSTOM {
             advance();
         }
         if (!isAtEnd() && peek().text == ";") {
-            advance(); 
+            advance();
         }
 
         VKA::DATA::ASTNode varNode;
@@ -123,6 +130,8 @@ namespace VKA::PARSER::CUSTOM {
         varNode.type = VKA::DATA::ASTNodeType::VariableDecl;
         varNode.input_pin_id = m_globalData.nextpinid++;
         varNode.output_pin_id = m_globalData.nextpinid++;
+
+        varNode.line = currentLine; 
 
         VKA::DATA::VariableDeclNodeData declData;
         declData.type = var_type;
@@ -153,7 +162,6 @@ namespace VKA::PARSER::CUSTOM {
         return VKA::DATA::Token{ VKA::DATA::Tokentype::Unknown, "EOF", 0, 0, "" };
     }
 
-    
     bool VKAParser::match(VKA::DATA::Tokentype type, const std::string& text) {
         if (isAtEnd()) return false;
 
@@ -218,6 +226,90 @@ namespace VKA::PARSER::CUSTOM {
         }
         default:
             break;
+        }
+    }
+
+    void VKAParser::layoutASTTree(uint32_t nodeid, float depth_y, float& current_x, VKA::DATA::ASTTree& tree) {
+        VKA::DATA::ASTNode* nodePtr = nullptr;
+        for (auto& n : tree.astnodes) {
+            if (n.id == nodeid) {
+                nodePtr = &n;
+                break;
+            }
+        }
+        if (!nodePtr) return;
+
+        const float X_SPACING = 220.0f;
+        const float Y_SPACING = 140.0f;
+
+        std::vector<uint32_t> children_indices;
+
+        switch (nodePtr->type) {
+        case VKA::DATA::ASTNodeType::FunctionCall: {
+            const auto& funcData = std::get<VKA::DATA::FunctionCallNodeData>(nodePtr->data);
+            children_indices = funcData.arguments_indices;
+            break;
+        }
+        case VKA::DATA::ASTNodeType::VariableDecl: {
+            const auto& varData = std::get<VKA::DATA::VariableDeclNodeData>(nodePtr->data);
+            if (varData.init_expression != UINT32_MAX) {
+                children_indices.push_back(varData.init_expression);
+            }
+            break;
+        }
+        case VKA::DATA::ASTNodeType::Block: {
+            const auto& blockData = std::get<VKA::DATA::BlockNodeData>(nodePtr->data);
+            children_indices = blockData.statements_indices;
+            break;
+        }
+        default:
+            break;
+        }
+
+        if (!children_indices.empty()) {
+            float start_x = current_x;
+            for (auto childId : children_indices) {
+                layoutASTTree(childId, depth_y + Y_SPACING, current_x, tree);
+            }
+            float end_x = current_x - X_SPACING;
+            nodePtr->pos_x = (start_x + end_x) / 2.0f;
+        }
+        else {
+            nodePtr->pos_x = current_x;
+            current_x += X_SPACING;
+        }
+
+        nodePtr->pos_y = depth_y;
+    }
+
+    bool VKAParser::isRootNode(uint32_t nodeid, const VKA::DATA::ASTTree& tree) {
+        for (const auto& n : tree.astnodes) {
+            if (n.type == VKA::DATA::ASTNodeType::FunctionCall) {
+                const auto& data = std::get<VKA::DATA::FunctionCallNodeData>(n.data);
+                for (auto id : data.arguments_indices) if (id == nodeid) return false;
+            }
+            else if (n.type == VKA::DATA::ASTNodeType::VariableDecl) {
+                const auto& data = std::get<VKA::DATA::VariableDeclNodeData>(n.data);
+                if (data.init_expression == nodeid) return false;
+            }
+        }
+        return true;
+    }
+
+    void VKAParser::buildGraphLayout(VKA::DATA::ASTTree& tree, VKA::DATA::GraphContext& ctx) {
+        float start_x = 50.0f;
+        float start_y = 50.0f;
+
+        for (auto& node : tree.astnodes) {
+            if (isRootNode(node.id, tree)) {
+                layoutASTTree(node.id, start_y, start_x, tree);
+            }
+        }
+
+        for (auto& node : tree.astnodes) {
+            if (isRootNode(node.id, tree)) {
+                flatasttree(node.id, UINT32_MAX, tree, ctx);
+            }
         }
     }
 

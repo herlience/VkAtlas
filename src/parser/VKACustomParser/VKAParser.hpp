@@ -23,6 +23,9 @@ namespace VKA::PARSER::CUSTOM {
 
         void parse(VKA::DATA::ASTTree& tree);
         void flatasttree(uint32_t nodeid, uint32_t parentoutpin, VKA::DATA::ASTTree& tree, VKA::DATA::GraphContext& ctx);
+        void layoutASTTree(uint32_t nodeid, float depth_y, float& current_x, VKA::DATA::ASTTree& tree);
+        bool isRootNode(uint32_t nodeid, const VKA::DATA::ASTTree& tree);
+        void buildGraphLayout(VKA::DATA::ASTTree& tree, VKA::DATA::GraphContext& ctx);
     };
 }
 
