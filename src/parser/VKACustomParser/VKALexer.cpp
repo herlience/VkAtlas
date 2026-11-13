@@ -13,13 +13,11 @@ namespace VKA::PARSER::LEXER {
 		while (m_cursor < m_source.length()) {
 			char c = m_source[m_cursor];
 
-			// 1. Boþluklar
 			if (isCharSpace(c)) {
 				advance();
 				continue;
 			}
 
-			// 2. Yeni Satýr
 			if (c == '\n') {
 				line++;
 				column = 1;
@@ -27,20 +25,19 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
-			// 3. Yorum Satýrlarý ve Bölme Operatörü (CRITICAL FIX)
 			if (c == '/') {
-				if (peeknext() == '/') { // Tek satýrlýk yorum //
+				if (peeknext() == '/') { 
 					while (m_cursor < m_source.length() && peek() != '\n') {
 						advance();
 					}
 					continue;
 				}
-				else if (peeknext() == '*') { // Çok satýrlýk yorum /* ... */
-					advance(); advance(); // /* karakterlerini atla
+				else if (peeknext() == '*') { 
+					advance(); advance();
 					while (m_cursor < m_source.length()) {
 						if (peek() == '\n') { line++; column = 1; }
 						if (peek() == '*' && peeknext() == '/') {
-							advance(); advance(); // */ kapat
+							advance(); advance();
 							break;
 						}
 						advance();
@@ -54,7 +51,6 @@ namespace VKA::PARSER::LEXER {
 				}
 			}
 
-			// 4. Oklar ve Scope Operatörleri (-> ve ::)
 			if (c == '-' && peeknext() == '>') {
 				addToken(VKA::DATA::Tokentype::Operator, "->", filepath);
 				advance(); advance();
@@ -66,7 +62,6 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
-			// 5. Tekli Operatörler
 			if (c == '{' || c == '[' || c == ']' || c == '}' || c == '.' || c == '=' ||
 				c == '(' || c == ')' || c == ';' || c == ',' || c == '*' || c == '+' || c == '-') {
 				addToken(VKA::DATA::Tokentype::Operator, std::string(1, c), filepath);
@@ -74,19 +69,16 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
-			// 6. Stringler
 			if (c == '"') {
 				parseString(filepath);
 				continue;
 			}
 
-			// 7. Kelimeler / Vulkan Komutlarý
 			if (isalpha(c) || c == '_') {
 				parseVk(context, filepath);
 				continue;
 			}
 
-			// 8. Karþýlaþtýrma Operatörleri
 			if (c == '<') {
 				advance();
 				if (match('<')) addToken(VKA::DATA::Tokentype::Operator, "<<", filepath);
@@ -117,7 +109,6 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
-			// 9. Makrolar (#include, #define)
 			if (c == '#') {
 				std::string directive;
 				while (m_cursor < m_source.length()) {
@@ -129,7 +120,6 @@ namespace VKA::PARSER::LEXER {
 				continue;
 			}
 
-			// 10. Sayýlar
 			if (isDigit(c)) {
 				parseDigit(filepath);
 				continue;
@@ -226,7 +216,6 @@ namespace VKA::PARSER::LEXER {
 			}
 		}
 
-		// Standart C++ Deðiþkeni / Identifier
 		addToken(VKA::DATA::Tokentype::Identifier, kelime, filepath);
 	}
 
