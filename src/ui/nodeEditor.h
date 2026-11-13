@@ -19,17 +19,15 @@ namespace ed = ax::NodeEditor;
 
 namespace VKA::UI {
 
-    // Visual-only pin categories, modelled after Unreal Engine Blueprint pin types.
-    // They only decide the pin glyph and colour; graph data (nodes, pins, links) is not modified.
     enum class PinCategory : uint8_t {
         Exec,       // white execution arrow
         Boolean,
         Integer,
         Float,
         String,
-        Enum,       // Vulkan enums / flags (UE byte-enum colour)
+        Enum,       // Vulkan enums / flags 
         Struct,
-        Handle,     // Vulkan handles (UE object reference colour)
+        Handle,     // Vulkan handles 
         Delegate,   // PFN_* function pointers
         Array,      // a list of children (function arguments)
         Wildcard    // unknown / untyped
@@ -44,7 +42,6 @@ namespace VKA::UI {
         inline void clearLayout();
 
     private:
-        // Cached presentation data of one ASTNode (rebuilt only when the graph changes).
         struct NodeVisual {
             VKA::DATA::Pin inPin;                    // from ASTNode::input_pin_id  (+ name from GraphContext::pin_map)
             VKA::DATA::Pin outPin;                   // from ASTNode::output_pin_id (+ name from GraphContext::pin_map)
@@ -52,7 +49,7 @@ namespace VKA::UI {
             PinCategory    outCategory  = PinCategory::Exec;
             bool           inConnected  = false;
             bool           outConnected = false;
-            bool           inByRef      = false;     // "&expr" -> UE pass-by-reference diamond
+            bool           inByRef      = false;     
             bool           compact      = false;     // header-less "getter" style node (expressions)
             bool           literal      = false;     // value drawn inside an inline literal box
             ImU32          headerColor  = 0;
@@ -101,8 +98,6 @@ namespace VKA::UI {
             default:              return "Unknown";
             }
         }
-
-        // ---- Unreal Blueprint inspired palette ------------------------------------------------
 
         namespace bp {
             constexpr ImU32 GraphBg        = IM_COL32( 38,  38,  38, 255);
@@ -290,10 +285,6 @@ namespace VKA::UI {
             return PinCategory::Wildcard;
         }
 
-        // ---- drawing helpers -------------------------------------------------------------------
-
-        // Recolours the vertices added since vtxStart with a linear gradient from p0 (c0) to p1 (c1).
-        // The original vertex alpha is kept as a mask, so anti-aliased edges stay smooth.
         inline void ShadeVerts(ImDrawList* dl, int vtxStart, const ImVec2& p0, const ImVec2& p1, ImU32 c0, ImU32 c1) {
             const ImVec2 axis     = p1 - p0;
             const float  lenSq    = ImLengthSqr(axis);
@@ -339,8 +330,6 @@ namespace VKA::UI {
             return out + "...";
         }
 
-        // Draws a Blueprint style pin glyph in a size x size box centred at `center`.
-        // Returns the horizontal extent (min x, max x) of the drawn glyph.
         inline ImVec2 DrawPinIcon(ImDrawList* dl, const ImVec2& center, float size, PinCategory category, bool connected, bool hovered, bool byRef) {
             ImU32 col = GetPinColor(category);
             if (hovered) col = MixColor(col, IM_COL32_WHITE, 0.35f);
@@ -637,7 +626,6 @@ namespace VKA::UI {
         const bool  hasIn  = n.input_pin_id  != UINT32_MAX;
         const bool  hasOut = n.output_pin_id != UINT32_MAX;
 
-        // UE style "WARNING!" / "ERROR!" strip at the bottom of the node (ASTNode::status)
         const char* bannerText      = nullptr;
         ImU32       bannerColor     = 0;
         ImU32       bannerTextColor = 0;
@@ -649,7 +637,6 @@ namespace VKA::UI {
         }
         const float bannerH = bannerText ? ImFloor(lineH + 6.0f) : 0.0f;
 
-        // ---- measure (sizes are known up front, so everything is drawn in a single pass)
         auto pinWidth = [&](const VKA::DATA::Pin& pin) {
             return iconSz + (pin.name.empty() ? 0.0f : 4.0f + ImGui::CalcTextSize(pin.name.c_str()).x);
         };
@@ -693,7 +680,7 @@ namespace VKA::UI {
         detail::FillGradient(dl, nodeMin, nodeMax, rounding, ImDrawFlags_RoundCornersAll,
                              v.compact ? bp::CompactTop : bp::BodyTop, v.compact ? bp::CompactBottom : bp::BodyBottom, false);
 
-        // ---- header: coloured gradient, gloss, icon, title and subtitle
+        // ---- header
         if (!v.compact) {
             const ImVec2 headerMax(nodeMax.x, nodeMin.y + headerH);
             detail::FillGradient(dl, nodeMin, headerMax, rounding, ImDrawFlags_RoundCornersTop,
@@ -770,7 +757,7 @@ namespace VKA::UI {
             }
 
             const float textY = ImFloor(rowMidY - lineH * 0.5f);
-            if (v.literal) { // literals sit in a UE style inline value box
+            if (v.literal) { 
                 const ImVec2 boxMin(x, textY - 3.0f), boxMax(x + valueW, textY + lineH + 3.0f);
                 dl->AddRectFilled(boxMin, boxMax, bp::ValueBoxBg, 3.0f);
                 dl->AddRect(boxMin, boxMax, bp::ValueBoxBorder, 3.0f);
@@ -941,7 +928,6 @@ namespace VKA::UI {
             ImGui::PopID();
         }
 
-        // Wires take the colour of the pin they feed (white + thick for execution flow), like Blueprint wires.
         for (const auto& link : ctx.links) {
             PinCategory category = PinCategory::Wildcard;
             if (const auto end = m_pinCategory.find(link.endpinid); end != m_pinCategory.end())
