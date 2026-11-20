@@ -10,6 +10,7 @@ namespace VKA::PARSER::XML {
 		~XMLParsing() = default;
 
 		bool initAndParse(VKA::DATA::GraphContext& graphcontext);
+		bool parseFile(const std::string& xmlpath, VKA::DATA::GraphContext& graphcontext);
 	private:
 		std::string findXMLPath();
 	};
